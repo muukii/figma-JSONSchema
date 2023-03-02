@@ -1,0 +1,14 @@
+{
+  "name": "JSONSchema",
+  "id": "1213079432043179812",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "capabilities": [],
+  "enableProposedApi": false,
+  "editorType": [
+    "figma",
+    "figjam"
+  ],
+  "containsWidget": true,
+  "widgetApi": "1.0.0"
+}
