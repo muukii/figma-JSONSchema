@@ -3,10 +3,11 @@
     "jsx": "react",
     "jsxFactory": "figma.widget.h",
     "jsxFragmentFactory": "figma.widget.Fragment",
-    "target": "es6",
+    "target": "es2017",
     "lib": [
-      "es6"
+      "es2017"
     ],
+    "moduleResolution": "node",
     "strict": true,
     "typeRoots": [
       "../node_modules/@types",
