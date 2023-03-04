@@ -9,6 +9,9 @@
     "figma",
     "figjam"
   ],
+  "ui": {
+    "settings": "ui-src/settings.html"
+  },
   "containsWidget": true,
   "widgetApi": "1.0.0"
 }

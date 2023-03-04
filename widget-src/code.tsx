@@ -40,34 +40,6 @@ import { JSONSchema7 } from "json-schema";
 //   required: ["data"],
 // };
 
-type Member = JSONObject | JSONArray | JSONString | JSONNumber | JSONBoolean;
-
-type JSONObject = {
-  type: "object";
-  name: string;
-  properties: Record<string, Member>;
-};
-
-type JSONNumber = {
-  type: "number";
-  name: string;
-};
-
-type JSONArray = {
-  type: "array";
-  name: string;
-};
-
-type JSONString = {
-  type: "string";
-  name: string;
-};
-
-type JSONBoolean = {
-  type: "boolean";
-  name: string;
-};
-
 function view(schema: JSONSchema7, name: string, nested: boolean = false) {
   if (schema.type === "object") {
   }
