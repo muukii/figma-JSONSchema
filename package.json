@@ -4,6 +4,7 @@
   "description": "Your Figma widget",
   "scripts": {
     "build": "esbuild widget-src/code.tsx --bundle --outfile=dist/code.js --target=es6",
+     "build-vite": "tsc && vite build",
     "tsc": "tsc --noEmit -p widget-src",
     "watch": "npm run build -- --watch"
   },
@@ -14,6 +15,7 @@
     "@figma/widget-typings": "*",
     "esbuild": "*",
     "typescript": "*",
+    "vite": "^4.1.4",
     "vite-plugin-singlefile": "^0.13.3"
   },
   "dependencies": {

@@ -1,5 +1,6 @@
 const { widget } = figma;
-const { AutoLayout, Frame, Input } = widget;
+const { AutoLayout, Frame, Input, useSyncedState, usePropertyMenu, useEffect } =
+  widget;
 import * as Icons from "./icons";
 import { JSONSchema7 } from "json-schema";
 
@@ -85,6 +86,25 @@ function view(schema: JSONSchema7, name: string, nested: boolean = false) {
 }
 
 function Widget() {
+  usePropertyMenu(
+    [
+      {
+        itemType: "action",
+        tooltip: "Settings",
+        propertyName: "settings",
+      },
+    ],
+    (event) => {
+      switch (event.propertyName) {
+        case "settings":
+          return new Promise((resolve) => {
+            figma.showUI(__uiFiles__.settings);
+          });
+          break;
+      }
+    }
+  );
+
   return view(
     {
       title: "SearchPartner",

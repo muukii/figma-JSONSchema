@@ -10,7 +10,7 @@
     "figjam"
   ],
   "ui": {
-    "settings": "ui-src/settings.html"
+    "settings": "ui-src/dist/index.html"
   },
   "containsWidget": true,
   "widgetApi": "1.0.0"
