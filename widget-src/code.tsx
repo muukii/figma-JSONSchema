@@ -90,7 +90,11 @@ function entrypoint(schema: JSONSchema7, onChange: () => void) {
     onRename: () => {},
     onDelete: () => {},
   });
-  return <VStack>{views.reverse()}</VStack>;
+  return (
+    <VStack fill={"#373747"} padding={24} cornerRadius={8}>
+      {views.reverse()}
+    </VStack>
+  );
 }
 
 function viewObject(args: {
@@ -140,7 +144,7 @@ function viewObject(args: {
   args.inoutViews.push(
     <VStack
       key={args.propertyName}
-      padding={{ left: 10 * args.indent }}
+      padding={{ left: 16 * args.indent }}
       width="fill-parent"
     >
       <HStack padding={{ bottom: 10 }} spacing={10} height="hug-contents">
@@ -152,7 +156,8 @@ function viewObject(args: {
             args.onRename(newValue.characters);
           }}
           value={args.propertyName}
-          fill="#000"
+          fill="#FFF"
+          blendMode="overlay"
         />
 
         <AddButton
@@ -217,7 +222,11 @@ function propertyView(args: {
 }
 
 function Tag(props: { value: string }) {
-  return <Text>{props.value}</Text>;
+  return (
+    <HStack padding={4} cornerRadius={4} fill="#FFFFFF0F">
+      <Text fill={"#FFF"}>{props.value}</Text>
+    </HStack>
+  );
 }
 
 function VStack(props: AutoLayoutProps) {
