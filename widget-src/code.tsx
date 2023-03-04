@@ -1,6 +1,13 @@
 const { widget } = figma;
-const { AutoLayout, Frame, Input, useSyncedState, usePropertyMenu, useEffect } =
-  widget;
+const {
+  AutoLayout,
+  Text,
+  Frame,
+  Input,
+  useSyncedState,
+  usePropertyMenu,
+  useEffect,
+} = widget;
 import * as Icons from "./icons";
 import { JSONSchema7 } from "json-schema";
 
@@ -41,50 +48,6 @@ import { JSONSchema7 } from "json-schema";
 //   required: ["data"],
 // };
 
-function view(schema: JSONSchema7, name: string, nested: boolean = false) {
-  if (schema.type === "object") {
-  }
-
-  let properties: any[] = [];
-
-  if (schema.properties) {
-    properties = Object.entries(schema.properties).map(([name, member]) => {
-      const _member = member as JSONSchema7;
-
-      const isRequiredProperty = schema.required?.includes(name);
-      const isNullable = _member.type?.includes("null");
-
-      return view(_member, name, true);
-    });
-  }
-
-  return (
-    <AutoLayout direction={"vertical"} padding={{ left: nested ? 10 : 0 }}>
-      <AutoLayout
-        direction={"horizontal"}
-        padding={{ bottom: 10 }}
-        height="hug-contents"
-      >
-        <Input placeholder={"name"} onTextEditEnd={() => {}} value={name} />
-        <AutoLayout onClick={() => {}} direction={"horizontal"}>
-          {Icons.plus()}
-        </AutoLayout>
-        <AutoLayout onClick={() => {}} direction={"horizontal"}>
-          {Icons.remove()}
-        </AutoLayout>
-        <AutoLayout onClick={() => {}} direction={"horizontal"}>
-          {Icons.up()}
-        </AutoLayout>
-        <AutoLayout onClick={() => {}} direction={"horizontal"}>
-          {Icons.down()}
-        </AutoLayout>
-      </AutoLayout>
-
-      {properties}
-    </AutoLayout>
-  );
-}
-
 function Widget() {
   usePropertyMenu(
     [
@@ -105,77 +68,219 @@ function Widget() {
     }
   );
 
-  return view(
-    {
-      title: "SearchPartner",
-      "x-stoplight": {
-        id: "ok8jf7zdntwf1",
-      },
-      type: "object",
-      description:
-        "DUX Search Normal / Search Grouping で使用するお相手ユーザーschema",
-      properties: {
-        id: {
-          type: "string",
-          description: "ユーザーID(rand)",
-          example: "3AQTaduKvYWFUK3mwjHCehyGPL3cURSUtePEwhKd26tH",
+  const [schema, setSchema] = useSyncedState("schema", {
+    type: "object",
+  } as JSONSchema7);
+
+  return entrypoint(schema, () => {
+    console.log("schema", JSON.stringify(schema, null, 2));
+    setSchema(schema);
+  });
+}
+
+function entrypoint(schema: JSONSchema7, onChange: () => void) {
+  let views: any[] = [];
+
+  propertyView({
+    inoutViews: views,
+    indent: 0,
+    schema,
+    name: "root",
+    onChange,
+    onRename: () => {},
+    onDelete: () => {},
+  });
+  return <VStack>{views.reverse()}</VStack>;
+}
+
+function viewObject(args: {
+  inoutViews: any[];
+  indent: number;
+  schema: JSONSchema7;
+  propertyName: string;
+  onChange: () => void;
+  onRename: (name: string) => void;
+  onDelete: () => void;
+}) {
+  const { schema } = args;
+
+  let properties: any[] = [];
+
+  if (schema.properties) {
+    properties = Object.entries(schema.properties).map(([name, member]) => {
+      const _member = member as JSONSchema7;
+
+      const isRequiredProperty = schema.required?.includes(name);
+      const isNullable = _member.type?.includes("null");
+
+      propertyView({
+        inoutViews: args.inoutViews,
+        indent: args.indent + 1,
+        schema: _member,
+        name: name,
+        onChange: args.onChange,
+        onRename: (newName) => {
+          console.log("rename", name, newName);
+          if (schema.properties) {
+            schema.properties[newName] = schema.properties[name];
+            delete schema.properties[name];
+            args.onChange();
+          }
         },
-        nickname: {
-          type: "string",
-          description: "ユーザー名",
+        onDelete: () => {
+          if (schema.properties) {
+            delete schema.properties[name];
+            args.onChange();
+          }
         },
-        age: {
-          type: "integer",
-          description: "年齢",
-          example: 25,
-        },
-        residence_state_id: {
-          type: "integer",
-          description: "居住地ID",
-          example: 1,
-        },
-        last_login_id: {
-          $ref: "#/components/schemas/LastLoginID",
-          description: "最終ログインID",
-        },
-        images: {
-          type: "array",
-          description: "ユーザー画像",
-          items: {
-            $ref: "#/components/schemas/PartnerImage",
-          },
-        },
-        is_new: {
-          type: "integer",
-          description: "新規ユーザーかどうか",
-        },
-        states: {
-          type: "object",
-          required: ["favorite", "commit_membership_status"],
-          properties: {
-            favorite: {
-              type: "integer",
-              description: "マイリスト追加済み（旧お気に入り）かどうか",
-            },
-            commit_membership_status: {
-              type: "integer",
-              description: "コミットメンバーシップステータス",
-            },
-          },
-        },
-      },
-      required: [
-        "id",
-        "nickname",
-        "age",
-        "residence_state_id",
-        "last_login_id",
-        "images",
-        "is_new",
-        "states",
-      ],
-    } as JSONSchema7,
-    "root"
+      });
+    });
+  }
+
+  args.inoutViews.push(
+    <VStack
+      key={args.propertyName}
+      padding={{ left: 10 * args.indent }}
+      width="fill-parent"
+    >
+      <HStack padding={{ bottom: 10 }} spacing={10} height="hug-contents">
+        <Tag value="Object" />
+
+        <Input
+          placeholder={"name"}
+          onTextEditEnd={(newValue) => {
+            args.onRename(newValue.characters);
+          }}
+          value={args.propertyName}
+          fill="#000"
+        />
+
+        <AddButton
+          onClick={() => {
+            const newPropertyName = "new property";
+
+            let properties = schema.properties || {};
+
+            // find distinct name with newPropertyName
+
+            let i = 0;
+            let found = true;
+            let name = "";
+            while (found == true) {
+              name = `${newPropertyName} ${i}`;
+              found = properties[name] != undefined;
+              i++;
+            }
+
+            properties[name] = { type: "object" };
+            schema.properties = properties;
+
+            console.log("add", schema);
+
+            args.onChange();
+          }}
+        />
+        <RemoveButton
+          onClick={() => {
+            args.onDelete();
+          }}
+        />
+        <UpButton onClick={() => {}} />
+        <DownButton onClick={() => {}} />
+      </HStack>
+    </VStack>
+  );
+}
+
+function propertyView(args: {
+  inoutViews: any[];
+  indent: number;
+  schema: JSONSchema7;
+  name?: string;
+  onChange: () => void;
+  onRename: (name: string) => void;
+  onDelete: () => void;
+}) {
+  if (args.schema.type === "object") {
+    return viewObject({
+      inoutViews: args.inoutViews,
+      indent: args.indent,
+      schema: args.schema,
+      propertyName: args.name ?? "",
+      onChange: args.onChange,
+      onRename: args.onRename,
+      onDelete: args.onDelete,
+    });
+  }
+
+  return <Text onClick={() => {}}>Not implemented</Text>;
+}
+
+function Tag(props: { value: string }) {
+  return <Text>{props.value}</Text>;
+}
+
+function VStack(props: AutoLayoutProps) {
+  const composed = props;
+  composed.direction = "vertical";
+  return <AutoLayout {...composed} />;
+}
+
+function HStack(props: AutoLayoutProps) {
+  const composed = props;
+  composed.direction = "horizontal";
+  return <AutoLayout {...composed} />;
+}
+
+function AddButton(props: { onClick: () => void }) {
+  return (
+    <AutoLayout
+      onClick={() => {
+        props.onClick();
+      }}
+      direction={"horizontal"}
+    >
+      {Icons.plus()}
+    </AutoLayout>
+  );
+}
+
+function RemoveButton(props: { onClick: () => void }) {
+  return (
+    <AutoLayout
+      onClick={() => {
+        props.onClick();
+      }}
+      direction={"horizontal"}
+    >
+      {Icons.remove()}
+    </AutoLayout>
+  );
+}
+
+function UpButton(props: { onClick: () => void }) {
+  return (
+    <AutoLayout
+      onClick={() => {
+        props.onClick();
+      }}
+      direction={"horizontal"}
+    >
+      {Icons.up()}
+    </AutoLayout>
+  );
+}
+
+function DownButton(props: { onClick: () => void }) {
+  return (
+    <AutoLayout
+      onClick={() => {
+        props.onClick();
+      }}
+      direction={"horizontal"}
+    >
+      {Icons.down()}
+    </AutoLayout>
   );
 }
 
