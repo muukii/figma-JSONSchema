@@ -50,6 +50,10 @@ import { JSONSchema7, JSONSchema7Definition } from "json-schema";
 // };
 
 function Widget() {
+  const [schema, setSchema] = useSyncedState("schema", {
+    type: "object",
+  } as JSONSchema7);
+
   usePropertyMenu(
     [
       {
@@ -62,15 +66,25 @@ function Widget() {
       switch (event.propertyName) {
         case "settings":
           return new Promise((resolve) => {
-            figma.showUI(__uiFiles__.settings);
+            figma.showUI(__uiFiles__.settings, {
+              width: 800,
+              height: 400,
+              title: "Schema JSON",
+            });
+            figma.ui.postMessage({
+              type: "schema-json",
+              code: JSON.stringify(schema, null, 2),
+            });
+            figma.ui.onmessage = (message) => {
+              if (message.type === "editor.onChange") {
+                console.log("message", message.schema);
+                setSchema(message.schema);
+              }
+            };
           });
       }
     }
   );
-
-  const [schema, setSchema] = useSyncedState("schema", {
-    type: "object",
-  } as JSONSchema7);
 
   return entrypoint(schema, () => {
     console.log("schema", JSON.stringify(schema, null, 2));
