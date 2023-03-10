@@ -148,8 +148,6 @@ function arrayView(context: Context) {
           context.onDelete();
         }}
       />
-      <UpButton onClick={() => {}} />
-      <DownButton onClick={() => {}} />
     </>
   );
 }
@@ -167,8 +165,6 @@ function compositionValueSectionView(args: {
       <Tag value={args.label} onClick={args.onClickTag} />
       <AddButton onClick={args.onClickAdd} />
       <RemoveButton onClick={args.onClickRemove} />
-      <UpButton onClick={args.onClickUp} />
-      <DownButton onClick={args.onClickDown} />
     </>
   );
 }
@@ -190,8 +186,6 @@ function primitiveValueSectionView(context: Context) {
           context.onDelete();
         }}
       />
-      <UpButton onClick={() => {}} />
-      <DownButton onClick={() => {}} />
     </>
   );
 }
