@@ -11,7 +11,11 @@ const {
 } = widget;
 import { AddButton, DownButton, UpButton, RemoveButton } from "./buttons";
 
-import { JSONSchema7, JSONSchema7Definition } from "json-schema";
+import {
+  JSONSchema7,
+  JSONSchema7Definition,
+  JSONSchema7TypeName,
+} from "json-schema";
 // const schema: JSONSchema = {
 //   title: "foo",
 //   type: "object",
@@ -65,12 +69,28 @@ function Widget() {
     [
       {
         itemType: "action",
-        tooltip: "Settings",
+        tooltip: "Edit Mode",
+        propertyName: "use-edit-mode",
+      },
+      {
+        itemType: "action",
+        tooltip: "Preview Mode",
+        propertyName: "use-preview-mode",
+      },
+      {
+        itemType: "action",
+        tooltip: "Code Editor",
         propertyName: "settings",
       },
     ],
     (event) => {
       switch (event.propertyName) {
+        case "use-edit-mode":
+          setDisplayMode("editing");
+          return;
+        case "use-preview-mode":
+          setDisplayMode("preview");
+          return;
         case "settings":
           return new Promise((resolve) => {
             figma.showUI(__uiFiles__.settings, {
@@ -93,19 +113,24 @@ function Widget() {
     }
   );
 
-  return entrypoint(schema, () => {
+  return entrypoint(schema, displayMode, () => {
     console.log("schema", JSON.stringify(schema, null, 2));
     setSchema(schema);
   });
 }
 
-function entrypoint(schema: JSONSchema7, onChange: () => void) {
+function entrypoint(
+  schema: JSONSchema7,
+  displayMode: DisplayMode,
+  onChange: () => void
+) {
   let views: any[] = [];
 
   propertyView({
     inoutViews: views,
     indent: 0,
     schema,
+    displayMode: displayMode,
     named: null,
     setNeedsDisplay: onChange,
     onDelete: () => {},
@@ -136,109 +161,93 @@ type Context = {
   indent: number;
   schema: JSONSchema7;
   named: Named | null;
+  displayMode: DisplayMode;
   setNeedsDisplay: () => void;
   onDelete: () => void;
 };
 
 function arrayView(context: Context) {
-  return (
-    <>
-      <Tag
-        value="array"
-        onClick={() => {
-          rotateType(context);
-        }}
-      />
+  switch (context.displayMode) {
+    case "preview":
+      return (
+        <>
+          <TypeLabel isSelected={true} value="array" onClick={() => {}} />
+        </>
+      );
+    case "editing":
+      return (
+        <>
+          <TypeSelection
+            type="array"
+            onClick={(type) => rotateType(type, context)}
+          />
 
-      <RemoveButton
-        onClick={() => {
-          context.onDelete();
-        }}
-      />
-    </>
-  );
+          <RemoveButton
+            onClick={() => {
+              context.onDelete();
+            }}
+          />
+        </>
+      );
+  }
 }
 
 function compositionValueSectionView(args: {
-  label: string;
-  onClickTag: () => void;
+  displayMode: DisplayMode;
+  type: ProperyType;
+  onClickTag: (ProperyType) => void;
   onClickAdd: () => void;
   onClickRemove: () => void;
-  onClickUp: () => void;
-  onClickDown: () => void;
 }) {
-  return (
-    <>
-      <Tag value={args.label} onClick={args.onClickTag} />
-      <AddButton onClick={args.onClickAdd} />
-      <RemoveButton onClick={args.onClickRemove} />
-    </>
-  );
+  switch (args.displayMode) {
+    case "preview":
+      return (
+        <>
+          <TypeLabel value={args.type} isSelected={true} onClick={() => {}} />
+        </>
+      );
+    case "editing":
+      return (
+        <>
+          <TypeSelection
+            type={args.type}
+            onClick={(type) => args.onClickTag(type)}
+          />
+          <AddButton onClick={args.onClickAdd} />
+          <RemoveButton onClick={args.onClickRemove} />
+        </>
+      );
+  }
 }
 
 function primitiveValueSectionView(context: Context) {
   const typeLabel = context.schema.type?.toString() || "unknown";
 
-  return (
-    <>
-      <Tag
-        value={typeLabel}
-        onClick={() => {
-          rotateType(context);
-        }}
-      />
+  switch (context.displayMode) {
+    case "preview":
+      return (
+        <TypeLabel
+          isSelected={true}
+          value={typeLabel as ProperyType}
+          onClick={() => {}}
+        />
+      );
+    case "editing":
+      return (
+        <>
+          <TypeSelection
+            type={typeLabel as ProperyType}
+            onClick={(type) => rotateType(type, context)}
+          />
 
-      <RemoveButton
-        onClick={() => {
-          context.onDelete();
-        }}
-      />
-    </>
-  );
-}
-
-function rotateType(context: Context) {
-  // to use same reference
-
-  if (context.schema.oneOf) {
-    context.schema.type = "object";
-    delete context.schema.oneOf;
-  } else {
-    Object.getOwnPropertyNames(context.schema)
-      .filter((key) => key !== "type")
-      .forEach((key) => {
-        delete (context.schema as any)[key];
-      });
-
-    switch (context.schema.type) {
-      case "object":
-        context.schema.type = "number";
-        break;
-      case "number":
-        context.schema.type = "integer";
-        break;
-      case "integer":
-        context.schema.type = "boolean";
-        break;
-      case "boolean":
-        context.schema.type = "array";
-        context.schema.items = { type: "object" };
-        break;
-      case "array":
-        context.schema.type = "string";
-        break;
-      case "string":
-        context.schema.oneOf = [];
-        delete context.schema.type;
-        break;
-      default:
-        context.schema.type = "object";
-        break;
-    }
+          <RemoveButton
+            onClick={() => {
+              context.onDelete();
+            }}
+          />
+        </>
+      );
   }
-
-  console.log("rotate", context.schema);
-  context.setNeedsDisplay();
 }
 
 function propertyView(context: Context) {
@@ -285,9 +294,10 @@ function propertyView(context: Context) {
   if (context.schema.type === "object") {
     push(
       compositionValueSectionView({
-        label: "object",
-        onClickTag: () => {
-          rotateType(context);
+        displayMode: context.displayMode,
+        type: "object",
+        onClickTag: (type) => {
+          rotateType(type, context);
         },
         onClickAdd: () => {
           const newPropertyName = "<#Property Name#>";
@@ -313,8 +323,6 @@ function propertyView(context: Context) {
           context.setNeedsDisplay();
         },
         onClickRemove: context.onDelete,
-        onClickUp: () => {},
-        onClickDown: () => {},
       })
     );
 
@@ -329,6 +337,7 @@ function propertyView(context: Context) {
           inoutViews: context.inoutViews,
           indent: context.indent + 1,
           schema: _member,
+          displayMode: context.displayMode,
           named: {
             name,
             onRename: (newName) => {
@@ -369,6 +378,7 @@ function propertyView(context: Context) {
             indent: context.indent + 1,
             schema: item as JSONSchema7,
             named: null,
+            displayMode: context.displayMode,
             setNeedsDisplay: context.setNeedsDisplay,
             onDelete: () => {
               // remove _member from array
@@ -385,6 +395,7 @@ function propertyView(context: Context) {
           inoutViews: context.inoutViews,
           indent: context.indent + 1,
           schema: context.schema.items as JSONSchema7,
+          displayMode: context.displayMode,
           named: null,
           setNeedsDisplay: context.setNeedsDisplay,
           onDelete: () => {},
@@ -398,9 +409,10 @@ function propertyView(context: Context) {
   if (context.schema.oneOf) {
     push(
       compositionValueSectionView({
-        label: "oneOf",
-        onClickTag: () => {
-          rotateType(context);
+        displayMode: context.displayMode,
+        type: "oneOf",
+        onClickTag: (type) => {
+          rotateType(type, context);
         },
         onClickAdd: () => {
           let schemas = context.schema.oneOf || [];
@@ -411,8 +423,6 @@ function propertyView(context: Context) {
           context.setNeedsDisplay();
         },
         onClickRemove: () => {},
-        onClickUp: () => {},
-        onClickDown: () => {},
       })
     );
 
@@ -425,6 +435,7 @@ function propertyView(context: Context) {
           indent: context.indent + 1,
           schema: _member,
           named: null,
+          displayMode: context.displayMode,
           setNeedsDisplay: context.setNeedsDisplay,
           onDelete: () => {
             // remove _member from array
@@ -447,15 +458,102 @@ function propertyView(context: Context) {
   push(<Text onClick={() => {}}>Not implemented</Text>);
 }
 
-function Tag(props: { value: string; onClick: () => void }) {
+type ProperyType =
+  | "object"
+  | "array"
+  | "string"
+  | "number"
+  | "integer"
+  | "boolean"
+  | "oneOf";
+
+function TypeLabel(props: {
+  isSelected: boolean;
+  value: ProperyType;
+  onClick: () => void;
+}) {
   return (
     <HStack
+      opacity={props.isSelected ? 1 : 0.5}
       onClick={props.onClick}
       padding={{ horizontal: 8, vertical: 4 }}
       cornerRadius={4}
       fill="#4f47e612"
     >
       <Text fill={"#4f47e6"}>{props.value}</Text>
+    </HStack>
+  );
+}
+
+function rotateType(targetType: ProperyType, context: Context) {
+  // to use same reference
+
+  Object.getOwnPropertyNames(context.schema)
+    .filter((key) => key !== "type")
+    .forEach((key) => {
+      delete (context.schema as any)[key];
+    });
+
+  switch (targetType) {
+    case "object":
+      context.schema.type = "object";
+      delete context.schema.oneOf;
+      break;
+    case "number":
+      context.schema.type = "number";
+      delete context.schema.oneOf;
+      break;
+    case "integer":
+      context.schema.type = "integer";
+      delete context.schema.oneOf;
+      break;
+    case "boolean":
+      context.schema.type = "boolean";
+      delete context.schema.oneOf;
+      break;
+    case "array":
+      context.schema.type = "array";
+      context.schema.items = { type: "object" };
+      delete context.schema.oneOf;
+      break;
+    case "string":
+      context.schema.type = "string";
+      delete context.schema.oneOf;
+    case "oneOf":
+      context.schema.oneOf = [];
+      delete context.schema.type;
+      break;
+  }
+
+  console.log("rotate", context.schema);
+  context.setNeedsDisplay();
+}
+
+function TypeSelection(props: {
+  type: ProperyType;
+  onClick: (type: ProperyType) => void;
+}) {
+  return (
+    <HStack spacing={8}>
+      {(
+        [
+          "object",
+          "array",
+          "string",
+          "number",
+          "integer",
+          "boolean",
+          "oneOf",
+        ] as ProperyType[]
+      ).map((type) => (
+        <TypeLabel
+          value={type}
+          isSelected={props.type == type}
+          onClick={() => {
+            props.onClick(type);
+          }}
+        />
+      ))}
     </HStack>
   );
 }
