@@ -49,10 +49,17 @@ import { JSONSchema7, JSONSchema7Definition } from "json-schema";
 //   required: ["data"],
 // };
 
+type DisplayMode = "preview" | "editing";
+
 function Widget() {
   const [schema, setSchema] = useSyncedState("schema", {
     type: "object",
   } as JSONSchema7);
+
+  const [displayMode, setDisplayMode] = useSyncedState(
+    "displayMode",
+    "preview" as DisplayMode
+  );
 
   usePropertyMenu(
     [

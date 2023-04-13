@@ -28,9 +28,20 @@ function App() {
   return (
     <div className="App">
       <Editor
+        options={{
+          cursorStyle: "line",
+          formatOnPaste: true,
+          formatOnType: true,
+          wordWrap: "on",
+        }}
         height="90vh"
-        defaultLanguage="json"
+        language="json"
         defaultValue={json}
+        onMount={(editor, monaco) => {
+          setTimeout(function () {
+            editor?.getAction("editor.action.formatDocument")?.run();
+          }, 300);
+        }}
         onChange={(value) => {
           if (value) {
             try {
