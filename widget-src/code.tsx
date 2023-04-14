@@ -206,15 +206,14 @@ function arrayView(context: Context) {
       return (
         <>
           {Description(context)}
-          <TypeSelection
-            type="array"
-            onClick={(type) => rotateType(type, context)}
-          />
-
           <RemoveButton
             onClick={() => {
               context.onDelete();
             }}
+          />
+          <TypeSelection
+            type="array"
+            onClick={(type) => rotateType(type, context)}
           />
         </>
       );
@@ -238,12 +237,12 @@ function compositionValueSectionView(args: {
     case "editing":
       return (
         <>
+          <AddButton onClick={args.onClickAdd} />
+          <RemoveButton onClick={args.onClickRemove} />
           <TypeSelection
             type={args.type}
             onClick={(type) => args.onClickTag(type)}
           />
-          <AddButton onClick={args.onClickAdd} />
-          <RemoveButton onClick={args.onClickRemove} />
         </>
       );
   }
@@ -288,15 +287,14 @@ function primitiveValueSectionView(context: Context) {
       return (
         <>
           {Description(context)}
-          <TypeSelection
-            type={typeLabel as ProperyType}
-            onClick={(type) => rotateType(type, context)}
-          />
-
           <RemoveButton
             onClick={() => {
               context.onDelete();
             }}
+          />
+          <TypeSelection
+            type={typeLabel as ProperyType}
+            onClick={(type) => rotateType(type, context)}
           />
         </>
       );
@@ -368,7 +366,7 @@ function propertyView(context: Context) {
               i++;
             }
 
-            properties[name] = { type: "object" };
+            properties[name] = { type: "string" };
             context.schema.properties = properties;
 
             console.log("add", context.schema);
@@ -547,6 +545,7 @@ function rotateType(targetType: ProperyType, context: Context) {
 
   Object.getOwnPropertyNames(context.schema)
     .filter((key) => key !== "type")
+    .filter((key) => key !== "description")
     .forEach((key) => {
       delete (context.schema as any)[key];
     });
