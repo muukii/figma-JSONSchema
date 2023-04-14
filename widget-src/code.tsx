@@ -7,9 +7,14 @@ const {
   Span,
   useSyncedState,
   usePropertyMenu,
-  useEffect,
+  useSyncedMap,
 } = widget;
 import { AddButton, DownButton, UpButton, RemoveButton } from "./buttons";
+import Color from "color";
+
+const keyColor = Color("#4f47e6");
+const secondaryColor = Color("#ac0e2e");
+const textColor = Color("#242424");
 
 import {
   JSONSchema7,
@@ -59,6 +64,8 @@ function Widget() {
   const [schema, setSchema] = useSyncedState("schema", {
     type: "object",
   } as JSONSchema7);
+
+  const editingContext = useSyncedMap("editingContext");
 
   const [displayMode, setDisplayMode] = useSyncedState(
     "displayMode",
@@ -113,12 +120,32 @@ function Widget() {
     }
   );
 
-  return entrypoint(schema, displayMode, () => {
-    console.log("schema", JSON.stringify(schema, null, 2));
-    setSchema(schema);
-  });
+  return (
+    <VStack>
+      {entrypoint(schema, displayMode, () => {
+        console.log("schema", JSON.stringify(schema, null, 2));
+        setSchema(schema);
+      })}
+    </VStack>
+  );
 }
 
+function editingPanel(context: Context) {
+  return (
+    <VStack>
+      <Text>Editing</Text>
+      <TypeSelection type={"array"} onClick={() => {}} />
+    </VStack>
+  );
+}
+
+/**
+ *
+ * @param schema
+ * @param displayMode
+ * @param onChange Updates the state with current modifying schema.
+ * @returns
+ */
 function entrypoint(
   schema: JSONSchema7,
   displayMode: DisplayMode,
@@ -171,12 +198,14 @@ function arrayView(context: Context) {
     case "preview":
       return (
         <>
+          {Description(context)}
           <TypeLabel isSelected={true} value="array" onClick={() => {}} />
         </>
       );
     case "editing":
       return (
         <>
+          {Description(context)}
           <TypeSelection
             type="array"
             onClick={(type) => rotateType(type, context)}
@@ -220,21 +249,45 @@ function compositionValueSectionView(args: {
   }
 }
 
+/**
+ * A view for editing description.
+ * @param context
+ * @returns
+ */
+function Description(context: Context) {
+  return (
+    <Input
+      fill={textColor.alpha(1).hexa()}
+      placeholder="Enter description"
+      value={context.schema.description || ""}
+      onTextEditEnd={(newValue) => {
+        context.schema.description = newValue.characters;
+        context.setNeedsDisplay();
+      }}
+    />
+  );
+}
+
 function primitiveValueSectionView(context: Context) {
   const typeLabel = context.schema.type?.toString() || "unknown";
 
   switch (context.displayMode) {
     case "preview":
       return (
-        <TypeLabel
-          isSelected={true}
-          value={typeLabel as ProperyType}
-          onClick={() => {}}
-        />
+        <>
+          {Description(context)}
+          <TypeLabel
+            isSelected={true}
+            value={typeLabel as ProperyType}
+            onClick={() => {}}
+          />
+        </>
       );
+
     case "editing":
       return (
         <>
+          {Description(context)}
           <TypeSelection
             type={typeLabel as ProperyType}
             onClick={(type) => rotateType(type, context)}
@@ -293,37 +346,38 @@ function propertyView(context: Context) {
 
   if (context.schema.type === "object") {
     push(
-      compositionValueSectionView({
-        displayMode: context.displayMode,
-        type: "object",
-        onClickTag: (type) => {
-          rotateType(type, context);
-        },
-        onClickAdd: () => {
-          const newPropertyName = "<#Property Name#>";
+      <>
+        {Description(context)}
+        {compositionValueSectionView({
+          displayMode: context.displayMode,
+          type: "object",
+          onClickTag: (type) => {
+            rotateType(type, context);
+          },
+          onClickAdd: () => {
+            let properties = context.schema.properties || {};
 
-          let properties = context.schema.properties || {};
+            // find distinct name with newPropertyName
 
-          // find distinct name with newPropertyName
+            let i = 0;
+            let found = true;
+            let name = "";
+            while (found == true) {
+              name = `<#Property Name ${i}#>`;
+              found = properties[name] != undefined;
+              i++;
+            }
 
-          let i = 0;
-          let found = true;
-          let name = "";
-          while (found == true) {
-            name = `<#Property Name ${i}#>`;
-            found = properties[name] != undefined;
-            i++;
-          }
+            properties[name] = { type: "object" };
+            context.schema.properties = properties;
 
-          properties[name] = { type: "object" };
-          context.schema.properties = properties;
+            console.log("add", context.schema);
 
-          console.log("add", context.schema);
-
-          context.setNeedsDisplay();
-        },
-        onClickRemove: context.onDelete,
-      })
+            context.setNeedsDisplay();
+          },
+          onClickRemove: context.onDelete,
+        })}
+      </>
     );
 
     if (context.schema.properties) {
@@ -408,22 +462,25 @@ function propertyView(context: Context) {
 
   if (context.schema.oneOf) {
     push(
-      compositionValueSectionView({
-        displayMode: context.displayMode,
-        type: "oneOf",
-        onClickTag: (type) => {
-          rotateType(type, context);
-        },
-        onClickAdd: () => {
-          let schemas = context.schema.oneOf || [];
+      <>
+        {Description(context)}
+        {compositionValueSectionView({
+          displayMode: context.displayMode,
+          type: "oneOf",
+          onClickTag: (type) => {
+            rotateType(type, context);
+          },
+          onClickAdd: () => {
+            let schemas = context.schema.oneOf || [];
 
-          schemas.push({ type: "object" });
-          context.schema.oneOf = schemas;
+            schemas.push({ type: "object" });
+            context.schema.oneOf = schemas;
 
-          context.setNeedsDisplay();
-        },
-        onClickRemove: () => {},
-      })
+            context.setNeedsDisplay();
+          },
+          onClickRemove: () => {},
+        })}
+      </>
     );
 
     if (context.schema.oneOf) {
@@ -474,13 +531,13 @@ function TypeLabel(props: {
 }) {
   return (
     <HStack
-      opacity={props.isSelected ? 1 : 0.5}
+      opacity={props.isSelected ? 1 : 0.4}
       onClick={props.onClick}
       padding={{ horizontal: 8, vertical: 4 }}
       cornerRadius={4}
-      fill="#4f47e612"
+      fill={keyColor.alpha(0.2).hexa()}
     >
-      <Text fill={"#4f47e6"}>{props.value}</Text>
+      <Text fill={keyColor.hex()}>{props.value}</Text>
     </HStack>
   );
 }
@@ -519,6 +576,7 @@ function rotateType(targetType: ProperyType, context: Context) {
     case "string":
       context.schema.type = "string";
       delete context.schema.oneOf;
+      break;
     case "oneOf":
       context.schema.oneOf = [];
       delete context.schema.type;
@@ -601,12 +659,12 @@ function PropertyName(props: {
   const isToken = props.value.startsWith("<#") && props.value.endsWith("#>");
   return (
     <Input
-      placeholder={"name"}
+      fill={secondaryColor.alpha(1).hexa()}
+      placeholder={"Enter property name"}
       onTextEditEnd={(newValue) => {
         props.onEdit(newValue.characters);
       }}
       value={isToken ? null : props.value}
-      fill="#2b2b2b"
     />
   );
 }
